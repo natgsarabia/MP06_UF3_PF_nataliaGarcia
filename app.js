@@ -5,27 +5,23 @@ root.render(<RenderPage />);
 
 /********************************************************************************************************************/
 // CREAMOS CONTEXTOS
-const ThemeContext = React.createContext();
 const SelectedUser = React.createContext();
+const UsersList = React.createContext();
 
 
 /********************************************************************************************************************/
 //COMPONENTE PADRE/RAIZ/ROOT.RENDER
 function RenderPage() {
-  //iniciamos la lista de usuarios al inicio, el el componente padre para poderselo pasar como
-  //props a los hijos y que siempre que se modifique se renderize
-  const [users, setUsers] = React.useState([]);
 
-
-  // Devolvemos los componentes Aside y Main dentro de los dos contextos creados
+  // Devolvemos los componentes Aside y Main dentro de los tres contextos creados
   return (
     <>
-      <SelectedUser.Provider value={React.useState(null)}>
-        <ThemeContext.Provider value={"light"}>
-          <Aside list={users} handler={setUsers}/>
-        </ThemeContext.Provider >
-        <Main list={users} handler={setUsers} />        
-      </SelectedUser.Provider>
+      <UsersList.Provider value={React.useState([])}>
+        <SelectedUser.Provider value={React.useState(null)}>
+          <Aside/>
+          <Main  />        
+        </SelectedUser.Provider>
+      </UsersList.Provider>
     </>
   );
 }
@@ -33,31 +29,26 @@ function RenderPage() {
 
 /********************************************************************************************************************/
 //COMPONENTE ASIDE
-function Aside({list,handler  }) {
+function Aside() {
 
   //estado para crear un nuevo usuario
   const [newUser, setNewUser] = React.useState("");
 
   //Declaramos  los contextos
-  const theme = React.useContext(ThemeContext);
   const [selectUser,setSelectUser] = React.useContext(SelectedUser);
+  const [users, setUsers] = React.useContext(UsersList);
 
   //FUNCION añadir un nuevo usuario a la lista de usuarios
   function addUser() {
     if (newUser.trim() === "") return;
-    handler([...list,{ name: newUser, tasks: [] }]);
+    setUsers([...users,{ name: newUser, tasks: [] }]);
     setNewUser("");
   };
 
   //FUNCIÓN Cambiar Tema
   function toggleTheme() {
-    if(theme === "light" ){
       document.body.classList.toggle("dark");
-      theme ="dark";
-    }  else {
       document.body.classList.toggle("light");
-      theme ="light";
-    } 
   }
 
   //RETURN , imprimimos el aside en el DOM
@@ -68,7 +59,7 @@ function Aside({list,handler  }) {
       {/* Lista usuarios */}
       <ul id="userList">
         {/* En caso de haber usuarios en la lista los mostramos */}
-        {list.length != 0 && list.map((user, index) => (
+        {users.length != 0 && users.map((user, index) => (
             <li
               style={{fontWeight:selectUser == index ? "bold" : "normal", cursor:"pointer"}}
               key={index}
@@ -87,15 +78,15 @@ function Aside({list,handler  }) {
         onChange={(e) => setNewUser(e.target.value)}
         placeholder="Nuevo usuario"
       />
-      <button onClick={addUser}>Agregar</button>
+      <button onClick={addUser}>Añadir Usuario</button>
       
       {/* informacion del usuario, solo se muestra si hay uno seleccionado */}
       <div id="userInfo" className={selectUser==null ?"hidden" :""}>
         <hr />
-        <p id="userName">{selectUser!=null ? list[selectUser].name:""}</p>
+        <p id="userName">{selectUser!=null ? users[selectUser].name:""}</p>
         <p id="userStats">
           {selectUser!=null && (()=>{
-            const user = list[selectUser];
+            const user = users[selectUser];
             const completed = user.tasks.filter(t => t.completed).length;
             return `Tareas: ${user.tasks.length} / ${completed} completadas`;
           })()}
@@ -112,10 +103,12 @@ function Aside({list,handler  }) {
 
 /********************************************************************************************************************/
 //COMPONENTE MAIN
-function Main({list,handler}) {
+function Main() {
 
   //Declaramos el contexto que necesitamos
   const [selectUser,setSelectUser] = React.useContext(SelectedUser);
+  const [users, setUsers] = React.useContext(UsersList);
+
   //Declaramos un state para tareas
   const [newTask, setNewTask] = React.useState("");
  
@@ -123,7 +116,7 @@ function Main({list,handler}) {
   //FUNCION añadir nueva tarea
   function addTask() {
     if (newTask.trim() === "") return;
-    handler(list.map((user, index) => {
+    setUsers(users.map((user, index) => {
       if (index === selectUser) {
       return {
         ...user,
@@ -137,67 +130,17 @@ function Main({list,handler}) {
     setNewTask("");
   }
   
-  //FUNCION marcar tarea como completada
-  function toggleTask(taskIndex) {
-    handler(list.map((user, indexUser) => {
-      if (indexUser === selectUser) {
-        return{
-          ...user,
-          //mapeamos las tareas del usuario y ponemos el estado contrario del actual
-          tasks: user.tasks.map((task, index)=> index ===taskIndex ? {...task, completed: !task.completed} : task)
-        };
-    }
-    return user;
-    }));
-  }
-  
-  //FUNCION eliminar tarea
-  function deleteTask(taskIndex) {
-    handler(list.map((user, indexUser) => {
-      if (indexUser === selectUser) {
-        return{
-          ...user,
-          tasks : user.tasks.filter((task,index)=>index!== taskIndex)
-        };
-      }
-      return user;
-    }));
-  }
-  
-  //Funcion editar tarea
-  function editTask(taskIndex) {
-    const newText = prompt("Editar tarea:", list[selectUser].tasks[taskIndex].text);
-    if (newText !== null && newText.trim() !== "") {
-      handler(list.map((user, indexUser) => {
-        if (indexUser === selectUser) {
-          return{
-            ...user,
-            //mapeamos las tareas del usuario y ponemos el estado contrario del actual
-            tasks: user.tasks.map((task, index)=> index ===taskIndex ? {...task, text: newText} : task)
-          };
-      }
-      return user;
-      }));
-      }
-  }
-  
   return (
     <main className="main">
       <div className="card">
-        <h1 id="mainTitle">{selectUser==null ? "Selecciona un usuario" : "Tareas de " + list[selectUser].name}</h1>
+        <h1 id="mainTitle">{selectUser==null ? "Selecciona un usuario" : "Tareas de " + users[selectUser].name}</h1>
         
         {/*Esta seccion se muestra solo si hay un usuario seleccionado  */}
         <div id="taskSection" className={selectUser==null ?"hidden" :""}>
           <ul id="taskList">
             {/* En caso de que el usuario tenga tareas las imprimirmos */}
-          {selectUser !== null && list[selectUser] && list[selectUser].tasks.map((task, taskIndex) => (
-              <li key={taskIndex} className={task.completed ? "completed" : ""}>
-                <span onClick={() => toggleTask(taskIndex)}>{task.text}</span>
-                <div className="actions">
-                  <button onClick ={() =>editTask(taskIndex)}>✏️</button>
-                  <button onClick ={() =>deleteTask(taskIndex)}>🗑️</button>
-                </div>
-              </li>
+          {selectUser !== null && users[selectUser] && users[selectUser].tasks.map((task, taskIndex) => (
+              <Task taskIndex={taskIndex} task={task}/>
             ))} 
           </ul>
 
@@ -216,3 +159,65 @@ function Main({list,handler}) {
 }
 
 
+/********************************************************************************************************************/
+//COMPONENTE TASK
+function Task ({taskIndex,task}){
+
+  //Declaramos el contexto que necesitaremos
+  const [users, setUsers] = React.useContext(UsersList);
+  const [selectUser,setSelectUser] = React.useContext(SelectedUser);
+
+  //FUNCION marcar tarea como completada
+  function toggleTask(taskIndex) {
+    setUsers(users.map((user, indexUser) => {
+      if (indexUser === selectUser) {
+        return{
+          ...user,
+          //mapeamos las tareas del usuario y ponemos el estado contrario del actual
+          tasks: user.tasks.map((task, index)=> index ===taskIndex ? {...task, completed: !task.completed} : task)
+        };
+    }
+    return user;
+    }));
+  }
+  
+  //FUNCION eliminar tarea
+  function deleteTask(taskIndex) {
+    setUsers(users.map((user, indexUser) => {
+      if (indexUser === selectUser) {
+        return{
+          ...user,
+          tasks : user.tasks.filter((task,index)=>index!== taskIndex)
+        };
+      }
+      return user;
+    }));
+  }
+  
+  //Funcion editar tarea
+  function editTask(taskIndex) {
+    const newText = prompt("Editar tarea:", users[selectUser].tasks[taskIndex].text);
+    if (newText !== null && newText.trim() !== "") {
+      setUsers(users.map((user, indexUser) => {
+        if (indexUser === selectUser) {
+          return{
+            ...user,
+            //mapeamos las tareas del usuario y ponemos el estado contrario del actual
+            tasks: user.tasks.map((task, index)=> index ===taskIndex ? {...task, text: newText} : task)
+          };
+      }
+      return user;
+      }));
+      }
+  }
+
+  return (
+    <li key={taskIndex} className={task.completed ? "completed" : ""}>
+        <span onClick={() => toggleTask(taskIndex)}>{task.text}</span>
+        <div className="actions">
+          <button onClick ={() =>editTask(taskIndex)}>✏️</button>
+          <button onClick ={() =>deleteTask(taskIndex)}>🗑️</button>
+        </div>
+    </li>
+  );
+}
